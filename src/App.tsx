@@ -27,10 +27,10 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
     return (
       <div className="min-h-screen min-h-[100dvh] bg-bg flex items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center mx-auto mb-4 animate-pulse">
+          <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-4">
             <span className="text-primary font-bold text-xl">Z</span>
           </div>
-          <p className="text-text-muted text-sm">Loading Zyven...</p>
+          <p className="text-text-muted text-sm">Loading...</p>
         </div>
       </div>
     );
@@ -50,10 +50,10 @@ function AppRoutes() {
     return (
       <div className="min-h-screen min-h-[100dvh] bg-bg flex items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center mx-auto mb-4 animate-pulse">
+          <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-4">
             <span className="text-primary font-bold text-xl">Z</span>
           </div>
-          <p className="text-text-muted text-sm">Loading Zyven...</p>
+          <p className="text-text-muted text-sm">Loading...</p>
         </div>
       </div>
     );
