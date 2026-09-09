@@ -4,9 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { motion } from 'framer-motion';
-import { Store, ArrowRight, Mail, Lock, User } from 'lucide-react';
+import { Store, ArrowRight, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import { createShop } from '@/lib/database';
 import { supabase } from '@/lib/supabase';
 
@@ -20,6 +18,7 @@ export default function AuthPage() {
   const [shopName, setShopName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   React.useEffect(() => {
     if (user) navigate('/', { replace: true });
@@ -46,7 +45,6 @@ export default function AuthPage() {
           setLoading(false);
           return;
         }
-        // Wait for the user to be created, then create shop
         const { data: { session: newSession } } = await supabase.auth.getSession();
         if (newSession?.user && shopName) {
           await createShop(shopName, newSession.user.id);
@@ -54,137 +52,155 @@ export default function AuthPage() {
         navigate('/', { replace: true });
       }
     } catch {
-      setError('An unexpected error occurred');
+      setError('Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen min-h-[100dvh] bg-bg flex items-center justify-center p-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="w-full max-w-md"
-      >
-        {/* Logo */}
-        <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center">
-            <Store className="h-7 w-7 text-primary" />
+    <div className="min-h-dvh bg-bg flex flex-col items-center justify-center px-5 py-12">
+      {/* Brand */}
+      <div className="flex items-center gap-3 mb-10">
+        <div className="w-11 h-11 rounded-xl bg-primary flex items-center justify-center">
+          <span className="text-text-inverse font-bold text-lg">Z</span>
+        </div>
+        <div>
+          <h1 className="text-xl font-bold text-text tracking-tight">Zyven</h1>
+          <p className="text-xs text-text-muted leading-tight">Run your shop. Know your numbers.</p>
+        </div>
+      </div>
+
+      {/* Card */}
+      <div className="w-full max-w-sm">
+        <div className="bg-surface border border-border-subtle rounded-2xl p-6">
+          {/* Header */}
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold text-text">
+              {mode === 'signin' ? 'Welcome back' : 'Create your account'}
+            </h2>
+            <p className="text-sm text-text-muted mt-1">
+              {mode === 'signin'
+                ? 'Sign in to your shop'
+                : 'Set up your shop in minutes'}
+            </p>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-text-primary">Zyven</h1>
-            <p className="text-xs text-text-muted">Run your shop. Know your numbers.</p>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {mode === 'signup' && (
+              <>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-text-secondary">Full Name</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted pointer-events-none" />
+                    <Input
+                      placeholder="John Kamau"
+                      value={fullName}
+                      onChange={e => setFullName(e.target.value)}
+                      className="pl-10"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-text-secondary">Shop Name</Label>
+                  <div className="relative">
+                    <Store className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted pointer-events-none" />
+                    <Input
+                      placeholder="Kamau Mini Mart"
+                      value={shopName}
+                      onChange={e => setShopName(e.target.value)}
+                      className="pl-10"
+                      required
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-text-secondary">Email</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted pointer-events-none" />
+                <Input
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  className="pl-10"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-text-secondary">Password</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted pointer-events-none" />
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  className="pl-10 pr-10"
+                  required
+                  minLength={6}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-secondary transition-colors"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+
+            {error && (
+              <div className="px-3 py-2.5 rounded-lg bg-danger-muted border border-danger/20">
+                <p className="text-sm text-danger">{error}</p>
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              className="w-full"
+              size="lg"
+              disabled={loading}
+            >
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full" />
+                  Please wait...
+                </span>
+              ) : (
+                <>
+                  {mode === 'signin' ? 'Sign In' : 'Create Account'}
+                  <ArrowRight className="h-4 w-4" />
+                </>
+              )}
+            </Button>
+          </form>
+
+          {/* Toggle */}
+          <div className="mt-5 text-center">
+            <button
+              onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setError(''); }}
+              className="text-sm text-text-muted hover:text-primary transition-colors"
+            >
+              {mode === 'signin'
+                ? <>New here? <span className="text-primary font-medium">Create an account</span></>
+                : <>Already have an account? <span className="text-primary font-medium">Sign in</span></>}
+            </button>
           </div>
         </div>
 
-        <Card className="bg-surface border-border">
-          <CardHeader>
-            <CardTitle className="text-center">
-              {mode === 'signin' ? 'Welcome Back' : 'Start Your Shop'}
-            </CardTitle>
-            <CardDescription className="text-center">
-              {mode === 'signin'
-                ? 'Sign in to manage your duka'
-                : 'Create your account and shop'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {mode === 'signup' && (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="fullName">Full Name</Label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
-                      <Input
-                        id="fullName"
-                        placeholder="John Kamau"
-                        value={fullName}
-                        onChange={e => setFullName(e.target.value)}
-                        className="pl-10"
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="shopName">Shop Name</Label>
-                    <div className="relative">
-                      <Store className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
-                      <Input
-                        id="shopName"
-                        placeholder="Kamau Mini Mart"
-                        value={shopName}
-                        onChange={e => setShopName(e.target.value)}
-                        className="pl-10"
-                        required
-                      />
-                    </div>
-                  </div>
-                </>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    className="pl-10"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    className="pl-10"
-                    required
-                    minLength={6}
-                  />
-                </div>
-              </div>
-
-              {error && (
-                <p className="text-sm text-danger text-center">{error}</p>
-              )}
-
-              <Button type="submit" className="w-full" size="lg" disabled={loading}>
-                {loading ? 'Please wait...' : mode === 'signin' ? 'Sign In' : 'Create Account'}
-                {!loading && <ArrowRight className="h-4 w-4" />}
-              </Button>
-            </form>
-
-            <div className="mt-4 text-center">
-              <button
-                onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setError(''); }}
-                className="text-sm text-text-secondary hover:text-primary transition-colors"
-              >
-                {mode === 'signin'
-                  ? "Don't have an account? Sign up"
-                  : 'Already have an account? Sign in'}
-              </button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <p className="text-center text-xs text-text-muted mt-6">
-          Zyven — POS & Inventory for Kenyan Shops
+        {/* Footer */}
+        <p className="text-center text-[11px] text-text-muted mt-6 leading-relaxed">
+          POS & Inventory for Kenyan Shops
         </p>
-      </motion.div>
+      </div>
     </div>
   );
 }

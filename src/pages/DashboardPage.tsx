@@ -3,12 +3,9 @@ import { useAuth } from '@/lib/auth';
 import { useNavigate } from 'react-router-dom';
 import { getDashboardData } from '@/lib/database';
 import { formatCurrency, formatNumber } from '@/lib/utils';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
 import {
-  ShoppingCart, TrendingUp, Receipt, Users, AlertTriangle,
+  ShoppingCart, TrendingUp, Users, AlertTriangle,
   Plus, ArrowUpRight, Wallet, CreditCard, Package, Clock,
 } from 'lucide-react';
 
@@ -44,7 +41,7 @@ export default function DashboardPage() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="flex items-center gap-3">
-          <div className="w-2 h-2 rounded-full bg-primary animate-[pulse_1.5s_ease-in-out_infinite]" />
+          <div className="w-1.5 h-1.5 rounded-full bg-primary" />
           <span className="text-text-muted text-sm">Loading dashboard</span>
         </div>
       </div>
@@ -52,162 +49,190 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="p-4 lg:p-6 max-w-7xl mx-auto space-y-6 pb-24 lg:pb-6">
-      {/* Header */}
+    <div className="px-4 lg:px-8 py-5 max-w-7xl mx-auto space-y-6 pb-24 lg:pb-6">
+      {/* ──── Header ──── */}
       <div>
-        <h1 className="text-xl lg:text-2xl font-bold text-text-primary">
+        <h1 className="text-2xl font-bold text-text tracking-tight">
           {getGreeting()}, {profile?.full_name?.split(' ')[0] || 'there'}
         </h1>
-        <p className="text-sm text-text-secondary mt-1">{today}</p>
+        <p className="text-sm text-text-muted mt-1">{today}</p>
       </div>
 
-      {/* Main KPI */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-        <Card className="bg-primary/5 border border-primary/15">
-          <CardContent className="p-5">
-            <p className="text-sm text-text-secondary mb-1">Today's Sales</p>
-            <p className="text-3xl lg:text-4xl font-bold text-primary">
-              {formatCurrency(data?.todaySales || 0)}
-            </p>
-            <div className="flex items-center gap-4 mt-3">
-              <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-success" />
-                <span className="text-xs text-text-secondary">{formatNumber(data?.transactionCount || 0)} sales</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+      {/* ──── Hero KPI: Today's Sales ──── */}
+      <div className="bg-surface border border-border-subtle rounded-2xl p-5">
+        <p className="text-xs font-medium text-text-muted uppercase tracking-wider mb-2">Today's Sales</p>
+        <p className="kpi-value text-primary">
+          {formatCurrency(data?.todaySales || 0)}
+        </p>
+        <div className="flex items-center gap-1.5 mt-2">
+          <span className="status-dot status-dot-success" />
+          <span className="text-xs text-text-secondary">{formatNumber(data?.transactionCount || 0)} transactions</span>
+        </div>
+      </div>
 
-      {/* Secondary KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* ──── Secondary KPIs ──── */}
+      <div className="grid grid-cols-2 gap-3">
+        <KpiCard
+          label="Net Profit"
+          value={formatCurrency(data?.netProfit || 0)}
+          icon={TrendingUp}
+          color="success"
+        />
+        <KpiCard
+          label="Cash Today"
+          value={formatCurrency(data?.cashSales || 0)}
+          icon={Wallet}
+          color="text"
+        />
+        <KpiCard
+          label="M-Pesa Today"
+          value={formatCurrency(data?.mpesaSales || 0)}
+          icon={CreditCard}
+          color="primary"
+        />
+        <KpiCard
+          label="Outstanding"
+          value={formatCurrency(data?.outstandingDebt || 0)}
+          icon={Users}
+          color="danger"
+        />
+      </div>
+
+      {/* ──── Quick Actions ──── */}
+      <div className="grid grid-cols-4 gap-2.5">
         {[
-          {
-            label: 'Net Profit',
-            value: formatCurrency(data?.netProfit || 0),
-            icon: TrendingUp,
-            color: 'text-success',
-            delay: 0.15,
-          },
-          {
-            label: 'Cash Today',
-            value: formatCurrency(data?.cashSales || 0),
-            icon: Wallet,
-            color: 'text-text-primary',
-            delay: 0.2,
-          },
-          {
-            label: 'M-Pesa Today',
-            value: formatCurrency(data?.mpesaSales || 0),
-            icon: CreditCard,
-            color: 'text-primary',
-            delay: 0.25,
-          },
-          {
-            label: 'Outstanding Debt',
-            value: formatCurrency(data?.outstandingDebt || 0),
-            icon: Users,
-            color: 'text-danger',
-            delay: 0.3,
-          },
-        ].map((kpi) => (
-          <motion.div
-            key={kpi.label}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: kpi.delay }}
+          { label: 'Sale', icon: ShoppingCart, path: '/pos', accent: true },
+          { label: 'Credit', icon: Users, path: '/daftari', accent: false },
+          { label: 'Payment', icon: ArrowUpRight, path: '/daftari', accent: false },
+          { label: 'Stock', icon: Package, path: '/stock', accent: false },
+        ].map(action => (
+          <button
+            key={action.label}
+            onClick={() => navigate(action.path)}
+            className={cn(
+              'flex flex-col items-center gap-2 py-4 rounded-xl transition-all active:scale-[0.97]',
+              action.accent
+                ? 'bg-primary text-text-inverse'
+                : 'bg-surface border border-border-subtle text-text-secondary hover:text-text hover:border-border'
+            )}
           >
-            <Card className="bg-surface">
-              <CardContent className="p-4">
-                <kpi.icon className={`h-4 w-4 ${kpi.color} mb-2`} />
-                <p className="text-xs text-text-muted">{kpi.label}</p>
-                <p className={`text-lg font-bold ${kpi.color} mt-0.5`}>{kpi.value}</p>
-              </CardContent>
-            </Card>
-          </motion.div>
+            <action.icon className="h-5 w-5" strokeWidth={1.8} />
+            <span className="text-xs font-medium">{action.label}</span>
+          </button>
         ))}
       </div>
 
-      {/* Quick Actions */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
-        <div className="grid grid-cols-4 gap-3">
-          {[
-            { label: '+ SALE', icon: ShoppingCart, path: '/pos', color: 'bg-primary text-bg' },
-            { label: '+ CREDIT', icon: Users, path: '/daftari', color: 'bg-elevated text-text-primary border border-border' },
-            { label: '+ PAYMENT', icon: ArrowUpRight, path: '/daftari', color: 'bg-success/10 text-success' },
-            { label: '+ STOCK', icon: Package, path: '/stock', color: 'bg-elevated text-text-primary border border-border' },
-          ].map(action => (
-            <button
-              key={action.label}
-              onClick={() => navigate(action.path)}
-              className={`flex flex-col items-center gap-2 py-4 rounded-xl transition-all active:scale-95 ${action.color}`}
-            >
-              <action.icon className="h-5 w-5" />
-              <span className="text-xs font-medium">{action.label}</span>
-            </button>
-          ))}
-        </div>
-      </motion.div>
-
-      {/* Needs Attention */}
+      {/* ──── Needs Attention ──── */}
       {(data?.lowStockProducts?.length > 0 || data?.overdueCustomers?.length > 0 || data?.activeShift) && (
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <AlertTriangle className="h-4 w-4 text-warning" />
-                Needs Attention
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {data?.activeShift && (
-                <div className="flex items-center justify-between p-3 rounded-lg bg-elevated">
-                  <div className="flex items-center gap-3">
+        <div>
+          <h2 className="text-sm font-semibold text-text-muted uppercase tracking-wider mb-3">
+            Needs Attention
+          </h2>
+          <div className="space-y-2">
+            {data?.activeShift && (
+              <div className="flex items-center justify-between p-3.5 rounded-xl bg-surface border border-border-subtle">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-primary-ghost flex items-center justify-center flex-shrink-0">
                     <Clock className="h-4 w-4 text-primary" />
-                    <div>
-                      <p className="text-sm font-medium text-text-primary">Active Shift</p>
-                      <p className="text-xs text-text-muted">Opened at {new Date(data.activeShift.opened_at).toLocaleTimeString()}</p>
-                    </div>
                   </div>
-                  <Button size="sm" variant="outline" onClick={() => navigate('/shifts')}>
-                    View
-                  </Button>
+                  <div>
+                    <p className="text-sm font-medium text-text">Active Shift</p>
+                    <p className="text-xs text-text-muted">
+                      Opened {new Date(data.activeShift.opened_at).toLocaleTimeString('en-KE', { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
                 </div>
-              )}
-              {data?.lowStockProducts?.slice(0, 3).map((product: any) => (
-                <div key={product.id} className="flex items-center justify-between p-3 rounded-lg bg-elevated">
-                  <div className="flex items-center gap-3">
+                <button
+                  onClick={() => navigate('/shifts')}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium text-primary bg-primary-ghost hover:bg-primary/15 transition-colors"
+                >
+                  View
+                </button>
+              </div>
+            )}
+
+            {data?.lowStockProducts?.slice(0, 3).map((product: any) => (
+              <div key={product.id} className="flex items-center justify-between p-3.5 rounded-xl bg-surface border border-border-subtle">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-lg bg-warning-muted flex items-center justify-center flex-shrink-0">
                     <Package className="h-4 w-4 text-warning" />
-                    <div>
-                      <p className="text-sm font-medium text-text-primary">{product.name}</p>
-                      <p className="text-xs text-text-muted">
-                        {product.current_stock === 0 ? 'Out of stock' : `Only ${product.current_stock} left`}
-                      </p>
-                    </div>
                   </div>
-                  <Badge variant={product.current_stock === 0 ? 'danger' : 'warning'}>
-                    {product.current_stock === 0 ? 'OOS' : 'LOW'}
-                  </Badge>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-text truncate">{product.name}</p>
+                    <p className="text-xs text-text-muted">
+                      {product.current_stock === 0 ? 'Out of stock' : `Only ${product.current_stock} left`}
+                    </p>
+                  </div>
                 </div>
-              ))}
-              {data?.overdueCustomers?.slice(0, 3).map((customer: any) => (
-                <div key={customer.id} className="flex items-center justify-between p-3 rounded-lg bg-elevated">
-                  <div className="flex items-center gap-3">
+                <span className={cn(
+                  'px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wide flex-shrink-0 ml-3',
+                  product.current_stock === 0
+                    ? 'bg-danger-muted text-danger'
+                    : 'bg-warning-muted text-warning'
+                )}>
+                  {product.current_stock === 0 ? 'OOS' : 'LOW'}
+                </span>
+              </div>
+            ))}
+
+            {data?.overdueCustomers?.slice(0, 3).map((customer: any) => (
+              <div key={customer.id} className="flex items-center justify-between p-3.5 rounded-xl bg-surface border border-border-subtle">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-lg bg-danger-muted flex items-center justify-center flex-shrink-0">
                     <Users className="h-4 w-4 text-danger" />
-                    <div>
-                      <p className="text-sm font-medium text-text-primary">{customer.full_name}</p>
-                      <p className="text-xs text-text-muted">Owes {formatCurrency(customer.current_balance)}</p>
-                    </div>
                   </div>
-                  <Button size="sm" variant="outline" onClick={() => navigate('/daftari')}>
-                    View
-                  </Button>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-text truncate">{customer.full_name}</p>
+                    <p className="text-xs text-text-muted">Owes {formatCurrency(customer.current_balance)}</p>
+                  </div>
                 </div>
-              ))}
-            </CardContent>
-          </Card>
-        </motion.div>
+                <button
+                  onClick={() => navigate('/daftari')}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium text-danger bg-danger-muted hover:bg-danger/15 transition-colors"
+                >
+                  View
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
+    </div>
+  );
+}
+
+/* ──── KPI Card ──── */
+function KpiCard({
+  label,
+  value,
+  icon: Icon,
+  color,
+}: {
+  label: string;
+  value: string;
+  icon: React.ElementType;
+  color: 'success' | 'primary' | 'danger' | 'text';
+}) {
+  const colorMap = {
+    success: 'text-success',
+    primary: 'text-primary',
+    danger: 'text-danger',
+    text: 'text-text',
+  };
+  const bgMap = {
+    success: 'bg-success-muted',
+    primary: 'bg-primary-ghost',
+    danger: 'bg-danger-muted',
+    text: 'bg-elevated',
+  };
+
+  return (
+    <div className="bg-surface border border-border-subtle rounded-xl p-4">
+      <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center mb-3', bgMap[color])}>
+        <Icon className={cn('h-4 w-4', colorMap[color])} strokeWidth={1.8} />
+      </div>
+      <p className="text-[11px] font-medium text-text-muted uppercase tracking-wider">{label}</p>
+      <p className={cn('kpi-value-sm mt-1', colorMap[color])}>{value}</p>
     </div>
   );
 }
