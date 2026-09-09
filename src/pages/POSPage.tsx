@@ -1,20 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
-import { searchProducts, processSale, getActiveShift } from '@/lib/database';
+import { searchProducts, getActiveShift } from '@/lib/database';
+import { processSaleOnlineOrQueue, isOnline, getQueueSize } from '@/lib/offline';
 import { formatCurrency, cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { BarcodeScanner } from '@/components/pos/BarcodeScanner';
 import { useToast } from '@/components/ui/toast';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { Product, CartItem, PaymentMethod } from '@/types';
 import {
   Search, ShoppingCart, Minus, Plus, Trash2,
   Banknote, CreditCard, Users, CheckCircle, AlertCircle,
-  Package,
+  Package, ScanBarcode,
 } from 'lucide-react';
 
 export default function POSPage() {
@@ -35,6 +37,8 @@ export default function POSPage() {
   const searchRef = useRef<HTMLInputElement>(null);
   const [customerSearch, setCustomerSearch] = useState('');
   const [customers, setCustomers] = useState<any[]>([]);
+  const [showScanner, setShowScanner] = useState(false);
+  const [offlineQueued, setOfflineQueued] = useState(0);
 
   useEffect(() => {
     if (!shop) return;
@@ -64,7 +68,27 @@ export default function POSPage() {
   useEffect(() => {
     if (!shop) return;
     getActiveShift(shop.id).then(s => setActiveShift(s));
+    setOfflineQueued(getQueueSize());
   }, [shop]);
+
+  const handleBarcodeDetected = async (barcode: string) => {
+    try {
+      const { data } = await supabase
+        .from('products')
+        .select('*')
+        .eq('shop_id', shop!.id)
+        .eq('is_active', true)
+        .or(`barcode.eq.${barcode},sku.eq.${barcode}`)
+        .limit(1);
+      if (data && data.length > 0) {
+        addToCart(data[0]);
+      } else {
+        addToast('warning', `No product with barcode ${barcode}`);
+      }
+    } catch {
+      addToast('error', 'Lookup failed');
+    }
+  };
 
   useEffect(() => {
     if (!shop || !customerSearch) return;
@@ -142,22 +166,65 @@ export default function POSPage() {
       addToast('error', 'Enter M-Pesa reference number');
       return;
     }
+    for (const item of cart) {
+      if (!item.buying_price || item.buying_price <= 0) {
+        addToast('error', `${item.product_name} needs a buying price before it can be sold`);
+        return;
+      }
+    }
     setProcessing(true);
     try {
-      const result = await processSale(
-        shop!.id, user!.id, cart, paymentMethod,
-        customerId || undefined, mpesaRef || undefined, 0, activeShift?.id
-      );
-      setLastSale({ ...result.sale, items: result.items, shop });
+      const clientRef = crypto.randomUUID();
+      const outcome = await processSaleOnlineOrQueue({
+        client_ref: clientRef,
+        shop_id: shop!.id,
+        user_id: user!.id,
+        cart: cart.map(i => ({
+          product_id: i.product_id,
+          product_name: i.product_name,
+          product_sku: i.product_sku || null,
+          quantity: i.quantity,
+          unit_price: i.unit_price,
+          buying_price: i.buying_price,
+          discount: i.discount || 0,
+        })),
+        payment_method: paymentMethod,
+        customer_id: customerId || undefined,
+        mpesa_reference: mpesaRef || undefined,
+        discount: 0,
+        shift_id: activeShift?.id,
+      });
+
+      if (outcome === 'queued') {
+        setOfflineQueued(getQueueSize());
+        setShowPayment(false);
+        setCart([]);
+        setMpesaRef('');
+        setCustomerId('');
+        setCustomerSearch('');
+        addToast('warning', 'Offline — sale saved', 'It will sync automatically when you are back online.');
+        return;
+      }
+
+      // Refresh the sale for receipt display
+      const { data: saleRow } = await supabase
+        .from('sales')
+        .select('*, items:sale_items(*)')
+        .eq('shop_id', shop!.id)
+        .eq('notes', `client_ref:${clientRef}`)
+        .maybeSingle();
+
+      setLastSale(saleRow ? { ...saleRow, shop } : { receipt_number: '—', total: cartTotal, items: cart.map(i => ({ product_name: i.product_name, quantity: i.quantity, total: i.unit_price * i.quantity })), shop });
       setShowPayment(false);
       setShowReceipt(true);
       setCart([]);
       setMpesaRef('');
       setCustomerId('');
       setCustomerSearch('');
-      addToast('success', 'Sale completed', `Receipt: ${result.sale.receipt_number}`);
-    } catch (err: any) {
-      addToast('error', 'Sale failed', err.message);
+      addToast('success', 'Sale completed');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Sale failed';
+      addToast('error', 'Sale failed', message);
     } finally {
       setProcessing(false);
     }
@@ -176,9 +243,17 @@ export default function POSPage() {
               placeholder="Search products..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full h-11 pl-10 pr-4 rounded-xl border border-border-subtle bg-elevated text-sm text-text placeholder:text-text-muted focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/25 transition-colors"
+              className="w-full h-11 pl-10 pr-24 rounded-xl border border-border-subtle bg-elevated text-sm text-text placeholder:text-text-muted focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/25 transition-colors"
               autoFocus
             />
+            <button
+              onClick={() => setShowScanner(true)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 h-8 px-2.5 rounded-lg bg-surface border border-border-subtle flex items-center gap-1.5 text-text-secondary hover:text-primary hover:border-primary/30 transition-colors"
+              aria-label="Scan barcode"
+            >
+              <ScanBarcode className="h-4 w-4" />
+              <span className="text-[11px] font-medium">Scan</span>
+            </button>
           </div>
           {!activeShift && (
             <div className="flex items-center gap-2 mt-2.5 px-3 py-2 rounded-lg bg-warning-muted text-warning text-xs font-medium">
@@ -355,6 +430,13 @@ export default function POSPage() {
           </Button>
         </div>
       </div>
+
+      {/* ──── Barcode Scanner ──── */}
+      <BarcodeScanner
+        open={showScanner}
+        onClose={() => setShowScanner(false)}
+        onDetected={handleBarcodeDetected}
+      />
 
       {/* ──── Payment Dialog ──── */}
       <Dialog open={showPayment} onOpenChange={setShowPayment}>

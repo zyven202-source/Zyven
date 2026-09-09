@@ -1,13 +1,15 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
-import { ArrowDownToLine, Receipt, Truck, BarChart3, Clock, Users2, TrendingUp, Settings, LogOut } from 'lucide-react';
+import { ArrowDownToLine, Receipt, Truck, BarChart3, Clock, Users2, TrendingUp, Settings, LogOut, Sparkles, ReceiptText } from 'lucide-react';
 
 export default function MorePage() {
   const navigate = useNavigate();
   const { role, signOut } = useAuth();
 
   const items = [
+    { label: 'Duka Assistant', icon: Sparkles, path: '/assistant', desc: 'Ask about your numbers' },
+    { label: 'Transactions', icon: ReceiptText, path: '/transactions', desc: 'All sales with receipts' },
     { label: 'Stock Management', icon: ArrowDownToLine, path: '/stock', desc: 'Receive and track inventory' },
     { label: 'Expenses', icon: Receipt, path: '/expenses', desc: 'Track shop expenses' },
     { label: 'Suppliers', icon: Truck, path: '/suppliers', desc: 'Manage suppliers', roles: ['OWNER', 'MANAGER'] },

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/toast';
-import { Download, Store, Shield, LogOut } from 'lucide-react';
+import { Download, Upload, Store, Shield, LogOut } from 'lucide-react';
 
 export default function SettingsPage() {
   const { shop, profile, role, signOut, refreshShop } = useAuth();
@@ -15,6 +15,7 @@ export default function SettingsPage() {
   const [shopAddress, setShopAddress] = useState(shop?.address || '');
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const handleSaveShop = async () => {
     if (!shop || !shopName.trim()) return;
@@ -44,6 +45,57 @@ export default function SettingsPage() {
       const a = document.createElement('a'); a.href = url; a.download = `zyven-backup-${new Date().toISOString().split('T')[0]}.json`; a.click(); URL.revokeObjectURL(url);
       addToast('success', 'Data exported');
     } catch (err: any) { addToast('error', 'Export failed', err.message); } finally { setExporting(false); }
+  };
+
+  const handleImport = async (file: File) => {
+    if (!shop) return;
+    try {
+      const text = await file.text();
+      const backup = JSON.parse(text);
+      // Validate structure before writing anything
+      if (!backup || backup.version !== '1.0' || !backup.shop || typeof backup.shop.id !== 'string') {
+        addToast('error', 'Invalid backup file', 'This does not look like a Zyven export.');
+        return;
+      }
+      if (backup.shop.id !== shop.id) {
+        addToast('error', 'Wrong shop backup', `This backup belongs to "${backup.shop.name}". You can only restore into the same shop.`);
+        return;
+      }
+      const counts = {
+        products: Array.isArray(backup.products) ? backup.products.length : 0,
+        customers: Array.isArray(backup.customers) ? backup.customers.length : 0,
+        expenses: Array.isArray(backup.expenses) ? backup.expenses.length : 0,
+        suppliers: Array.isArray(backup.suppliers) ? backup.suppliers.length : 0,
+      };
+      const ok = window.confirm(
+        `Restore backup from ${new Date(backup.exported_at).toLocaleString('en-KE')}?\n\n` +
+        `It contains ${counts.products} products, ${counts.customers} customers, ${counts.expenses} expenses, ${counts.suppliers} suppliers.\n\n` +
+        'Existing records with the same IDs will be updated; nothing will be deleted.'
+      );
+      if (!ok) return;
+
+      // Upsert non-financial master data only (never overwrite transactions)
+      const upsert = async (table: string, rows: Record<string, unknown>[] | null | undefined, cols: string[]) => {
+        if (!rows || rows.length === 0) return;
+        const payload = rows.map((r) => {
+          const o: Record<string, unknown> = { id: r.id };
+          for (const c of cols) if (r[c] !== undefined) o[c] = r[c];
+          return o;
+        });
+        const { error } = await supabase.from(table).upsert(payload, { onConflict: 'id' });
+        if (error) throw error;
+      };
+
+      await upsert('suppliers', backup.suppliers, ['name', 'phone', 'email', 'address', 'notes']);
+      await upsert('customers', backup.customers, ['full_name', 'phone', 'notes', 'current_balance']);
+      await upsert('products', backup.products, ['name', 'barcode', 'sku', 'buying_price', 'selling_price', 'minimum_stock', 'unit', 'notes', 'is_active']);
+      await upsert('expenses', backup.expenses, ['amount', 'category', 'description', 'expense_date', 'payment_method']);
+
+      addToast('success', 'Restore complete', 'Master data has been restored.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Import failed';
+      addToast('error', 'Import failed', message);
+    }
   };
 
   return (
@@ -76,9 +128,22 @@ export default function SettingsPage() {
       {/* Data */}
       <div className="bg-surface border border-border-subtle rounded-2xl p-5">
         <h3 className="text-xs font-medium text-text-muted uppercase tracking-wider mb-4 flex items-center gap-2"><Download className="h-3.5 w-3.5" /> Data</h3>
-        <Button variant="outline" className="w-full" onClick={handleExport} disabled={exporting}>
-          <Download className="h-4 w-4" />{exporting ? 'Exporting...' : 'Export Business Data'}
-        </Button>
+        <div className="space-y-2">
+          <Button variant="outline" className="w-full" onClick={handleExport} disabled={exporting}>
+            <Download className="h-4 w-4" />{exporting ? 'Exporting...' : 'Export Business Data'}
+          </Button>
+          <Button variant="outline" className="w-full" onClick={() => fileInputRef.current?.click()}>
+            <Upload className="h-4 w-4" /> Import / Restore Backup
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json"
+            className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImport(f); e.target.value = ''; }}
+          />
+          <p className="text-[11px] text-text-muted">Restore only updates products, customers, suppliers and expenses. Sales history is never modified.</p>
+        </div>
       </div>
 
       {/* Sign Out */}

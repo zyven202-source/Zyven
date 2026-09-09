@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 import { getProducts, createProduct, updateProduct, getCategories, createCategory } from '@/lib/database';
 import { formatCurrency, cn } from '@/lib/utils';
@@ -16,10 +17,11 @@ import {
   XCircle, Edit, DollarSign,
 } from 'lucide-react';
 
-type FilterType = 'all' | 'low_stock' | 'out_of_stock';
+type FilterType = 'all' | 'low_stock' | 'out_of_stock' | 'expiring';
 
 export default function InventoryPage() {
   const { shop, role } = useAuth();
+  const navigate = useNavigate();
   const { addToast } = useToast();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -40,6 +42,7 @@ export default function InventoryPage() {
   const [formCategory, setFormCategory] = useState('');
   const [formUnit, setFormUnit] = useState('pcs');
   const [formNotes, setFormNotes] = useState('');
+  const [formExpiry, setFormExpiry] = useState('');
   const [newCategoryName, setNewCategoryName] = useState('');
   const [showNewCategory, setShowNewCategory] = useState(false);
 
@@ -65,6 +68,11 @@ export default function InventoryPage() {
   const filteredProducts = products.filter(p => {
     if (filter === 'low_stock' && p.current_stock > p.minimum_stock) return false;
     if (filter === 'out_of_stock' && p.current_stock > 0) return false;
+    if (filter === 'expiring') {
+      if (!p.expiry_date) return false;
+      const days = (new Date(p.expiry_date).getTime() - Date.now()) / 86400000;
+      if (days > 30) return false;
+    }
     if (search) {
       const q = search.toLowerCase();
       return p.name.toLowerCase().includes(q) ||
@@ -82,7 +90,7 @@ export default function InventoryPage() {
     setFormName(''); setFormBarcode(''); setFormSku('');
     setFormBuyingPrice(''); setFormSellingPrice(''); setFormStock('0');
     setFormMinStock('5'); setFormCategory(''); setFormUnit('pcs');
-    setFormNotes(''); setEditingProduct(null);
+    setFormNotes(''); setFormExpiry(''); setEditingProduct(null);
   };
 
   const handleSaveProduct = async () => {
@@ -96,6 +104,7 @@ export default function InventoryPage() {
           buying_price: Number(formBuyingPrice), selling_price: Number(formSellingPrice),
           minimum_stock: Number(formMinStock), category_id: formCategory || undefined,
           unit: formUnit, notes: formNotes || undefined,
+          expiry_date: formExpiry || undefined,
         });
         addToast('success', 'Product updated');
       } else {
@@ -106,6 +115,7 @@ export default function InventoryPage() {
           current_stock: Number(formStock), minimum_stock: Number(formMinStock),
           category_id: formCategory || undefined, unit: formUnit,
           notes: formNotes || undefined, is_active: true,
+          expiry_date: formExpiry || undefined,
         });
         addToast('success', 'Product created');
       }
@@ -142,6 +152,7 @@ export default function InventoryPage() {
     setFormCategory(product.category_id || '');
     setFormUnit(product.unit);
     setFormNotes(product.notes || '');
+    setFormExpiry(product.expiry_date ? String(product.expiry_date).split('T')[0] : '');
     setShowAddProduct(true);
   };
 
@@ -149,6 +160,7 @@ export default function InventoryPage() {
     { key: 'all', label: 'All', count: products.length },
     { key: 'low_stock', label: 'Low Stock', count: lowStockCount },
     { key: 'out_of_stock', label: 'Out of Stock', count: outOfStockCount },
+    { key: 'expiring', label: 'Expiring', count: products.filter(p => p.expiry_date && (new Date(p.expiry_date).getTime() - Date.now()) / 86400000 <= 30).length },
   ];
 
   return (
@@ -232,7 +244,7 @@ export default function InventoryPage() {
             return (
               <button
                 key={product.id}
-                onClick={() => setSelectedProduct(product)}
+                onClick={() => navigate(`/inventory/${product.id}`)}
                 className={cn(
                   'w-full text-left p-4 rounded-xl border transition-all active:scale-[0.99]',
                   isOOS ? 'border-danger/20 bg-surface' : isLow ? 'border-warning/20 bg-surface' : 'border-border-subtle bg-surface hover:border-border'
@@ -244,6 +256,11 @@ export default function InventoryPage() {
                       <h3 className="text-sm font-medium text-text truncate">{product.name}</h3>
                       {isOOS && <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-danger-muted text-danger">OOS</span>}
                       {isLow && !isOOS && <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-warning-muted text-warning">LOW</span>}
+                      {product.expiry_date && (new Date(product.expiry_date).getTime() - Date.now()) / 86400000 <= 30 && (
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-warning-muted text-warning">
+                          {new Date(product.expiry_date) < new Date() ? 'EXPIRED' : 'EXP SOON'}
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-3 mt-1 text-[11px] text-text-muted">
                       {product.barcode && <span>BC: {product.barcode}</span>}
@@ -372,6 +389,10 @@ export default function InventoryPage() {
                   <SelectItem value="cartons">Cartons</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-text-secondary">Expiry Date (optional)</Label>
+              <Input type="date" value={formExpiry} onChange={e => setFormExpiry(e.target.value)} />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs font-medium text-text-secondary">Notes</Label>

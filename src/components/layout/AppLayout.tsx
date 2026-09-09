@@ -6,6 +6,7 @@ import {
   Home, ShoppingCart, Package, Users,
   TrendingUp, ArrowDownToLine, Receipt, BarChart3,
   Settings, Users2, Truck, LogOut, X, Menu, Clock,
+  ReceiptText, Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { UserRole } from '@/types';
@@ -26,6 +27,8 @@ const primaryNav: NavItem[] = [
 ];
 
 const secondaryNav: NavItem[] = [
+  { path: '/assistant', label: 'Duka Assistant', icon: Sparkles },
+  { path: '/transactions', label: 'Transactions', icon: ReceiptText },
   { path: '/expenses', label: 'Expenses', icon: Receipt, roles: ['OWNER', 'MANAGER'] },
   { path: '/shifts', label: 'Shifts', icon: Clock },
   { path: '/reports', label: 'Reports', icon: BarChart3, roles: ['OWNER', 'MANAGER'] },

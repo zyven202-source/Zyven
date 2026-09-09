@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
-import { searchProducts, addStock, getStockMovements, createProduct, getSuppliers } from '@/lib/database';
+import { supabase } from '@/lib/supabase';
+import { searchProducts, addStock, adjustStock, getStockMovements, createProduct, getSuppliers } from '@/lib/database';
 import { formatCurrency, cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { BarcodeScanner } from '@/components/pos/BarcodeScanner';
 import { useToast } from '@/components/ui/toast';
-import { Search, Plus, ArrowDownToLine, Package, History } from 'lucide-react';
+import { Search, Plus, ArrowDownToLine, Package, History, ScanBarcode, MinusCircle } from 'lucide-react';
+import type { StockMovementType } from '@/types';
 
 export default function StockPage() {
   const { shop, user } = useAuth();
@@ -34,6 +38,11 @@ export default function StockPage() {
   const [newSellingPrice, setNewSellingPrice] = useState('');
   const [newQuantity, setNewQuantity] = useState('');
   const [newMinStock, setNewMinStock] = useState('5');
+  const [showScanner, setShowScanner] = useState(false);
+  const [showAdjust, setShowAdjust] = useState(false);
+  const [adjustType, setAdjustType] = useState<StockMovementType>('DAMAGE');
+  const [adjustQty, setAdjustQty] = useState('');
+  const [adjustReason, setAdjustReason] = useState('');
 
   useEffect(() => {
     if (!shop) return;
@@ -66,6 +75,50 @@ export default function StockPage() {
     if (shop) {
       const movements = await getStockMovements(shop.id, product.id);
       setStockHistory(movements);
+    }
+  };
+
+  const handleBarcodeDetected = async (barcode: string) => {
+    try {
+      const { data } = await supabase
+        .from('products')
+        .select('*')
+        .eq('shop_id', shop!.id)
+        .eq('is_active', true)
+        .or(`barcode.eq.${barcode},sku.eq.${barcode}`)
+        .limit(1);
+      if (data && data.length > 0) {
+        setSearchQuery('');
+        setSearchResults([]);
+        selectProduct(data[0]);
+      } else {
+        addToast('warning', `No product with barcode ${barcode}`);
+        setNewBarcode(barcode);
+        setShowNewProduct(true);
+      }
+    } catch {
+      addToast('error', 'Lookup failed');
+    }
+  };
+
+  const handleAdjustStock = async () => {
+    if (!shop || !user || !selectedProduct) return;
+    const qty = Number(adjustQty);
+    if (!qty || qty <= 0) { addToast('error', 'Quantity must be greater than 0'); return; }
+    if (!adjustReason.trim()) { addToast('error', 'A reason is required for stock adjustments'); return; }
+    try {
+      await adjustStock(shop.id, selectedProduct.id, -qty, adjustType, user.id, adjustReason.trim());
+      await supabase.from('audit_logs').insert({
+        shop_id: shop.id, user_id: user.id, action: 'STOCK_ADJUSTED', entity_type: 'product', entity_id: selectedProduct.id,
+        metadata: { product: selectedProduct.name, quantity: -qty, reason: adjustReason.trim(), movement_type: adjustType },
+      });
+      addToast('success', 'Stock adjusted', `${selectedProduct.name}: -${qty}`);
+      setShowAdjust(false);
+      setAdjustQty(''); setAdjustReason('');
+      handleSearch();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Adjustment failed';
+      addToast('error', 'Adjustment failed', message);
     }
   };
 
@@ -128,9 +181,17 @@ export default function StockPage() {
           placeholder="Search product by name, barcode, or SKU..."
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
-          className="w-full h-11 pl-10 pr-4 rounded-xl border border-border-subtle bg-elevated text-sm text-text placeholder:text-text-muted focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/25 transition-colors"
+          className="w-full h-11 pl-10 pr-24 rounded-xl border border-border-subtle bg-elevated text-sm text-text placeholder:text-text-muted focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/25 transition-colors"
           autoFocus
         />
+        <button
+          onClick={() => setShowScanner(true)}
+          className="absolute right-2 top-1/2 -translate-y-1/2 h-8 px-2.5 rounded-lg bg-surface border border-border-subtle flex items-center gap-1.5 text-text-secondary hover:text-primary hover:border-primary/30 transition-colors"
+          aria-label="Scan barcode"
+        >
+          <ScanBarcode className="h-4 w-4" />
+          <span className="text-[11px] font-medium">Scan</span>
+        </button>
       </div>
 
       {searchResults.length > 0 && (
@@ -148,11 +209,20 @@ export default function StockPage() {
                     Buy {formatCurrency(Number(product.buying_price))} · Sell {formatCurrency(Number(product.selling_price))}
                   </p>
                 </div>
-                <div className="text-right">
-                  <p className={cn('text-sm font-bold tabular-nums', product.current_stock === 0 ? 'text-danger' : 'text-text')}>
-                    {product.current_stock} {product.unit}
-                  </p>
-                  <p className="text-[10px] text-text-muted">in stock</p>
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setSelectedProduct(product); setAdjustType('DAMAGE'); setAdjustQty(''); setAdjustReason(''); setShowAdjust(true); }}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-text-muted hover:text-danger hover:bg-danger-muted transition-colors"
+                    aria-label="Adjust stock"
+                  >
+                    <MinusCircle className="h-4 w-4" />
+                  </button>
+                  <div className="text-right">
+                    <p className={cn('text-sm font-bold tabular-nums', product.current_stock === 0 ? 'text-danger' : 'text-text')}>
+                      {product.current_stock} {product.unit}
+                    </p>
+                    <p className="text-[10px] text-text-muted">in stock</p>
+                  </div>
                 </div>
               </div>
             </button>
@@ -242,6 +312,48 @@ export default function StockPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Adjust Stock Dialog */}
+      <Dialog open={showAdjust} onOpenChange={setShowAdjust}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Adjust Stock</DialogTitle>
+            <DialogDescription>{selectedProduct?.name} — {selectedProduct?.current_stock} in stock</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-text-secondary">Reason *</Label>
+              <Select value={adjustType} onValueChange={v => setAdjustType(v as StockMovementType)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="DAMAGE">Damaged</SelectItem>
+                  <SelectItem value="EXPIRED">Expired</SelectItem>
+                  <SelectItem value="LOST">Lost</SelectItem>
+                  <SelectItem value="THEFT">Theft</SelectItem>
+                  <SelectItem value="COUNTING_CORRECTION">Counting correction</SelectItem>
+                  <SelectItem value="ADJUSTMENT">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-text-secondary">Quantity removed *</Label>
+              <Input type="number" min="1" placeholder="0" value={adjustQty} onChange={e => setAdjustQty(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-text-secondary">Details (required) *</Label>
+              <Textarea placeholder="Explain what happened..." value={adjustReason} onChange={e => setAdjustReason(e.target.value)} />
+            </div>
+            <p className="text-[11px] text-text-muted">Every adjustment is recorded in the audit log.</p>
+            <div className="flex gap-3">
+              <Button variant="outline" className="flex-1" onClick={() => setShowAdjust(false)}>Cancel</Button>
+              <Button variant="destructive" className="flex-1" onClick={handleAdjustStock}>Remove Stock</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Barcode Scanner */}
+      <BarcodeScanner open={showScanner} onClose={() => setShowScanner(false)} onDetected={handleBarcodeDetected} />
 
       {/* New Product Dialog */}
       <Dialog open={showNewProduct} onOpenChange={setShowNewProduct}>
