@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npx tsc -b && npx vite build",
+    "build": "sh ./build.sh",
     "lint": "oxlint",
     "preview": "vite preview"
   },
