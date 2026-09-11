@@ -6,6 +6,7 @@ import { formatCurrency, formatNumber, cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/toast';
 import { BarChart3, TrendingUp, DollarSign, Package, Users } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { SkeletonPage } from '@/components/ui/skeleton';
 
 const COLORS = ['#F59E0B', '#22C55E', '#3B82F6', '#EF4444', '#8B5CF6'];
 
@@ -48,7 +49,7 @@ export default function ReportsPage() {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64"><div className="w-1.5 h-1.5 rounded-full bg-primary" /><span className="text-text-muted text-sm ml-3">Loading reports</span></div>;
+    return <SkeletonPage label="Loading reports" />;
   }
 
   return (

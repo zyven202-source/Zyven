@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/components/ui/toast';
 import { Plus, Receipt } from 'lucide-react';
 import type { Expense, ExpenseCategory, PaymentMethod } from '@/types';
+import { SkeletonPage } from '@/components/ui/skeleton';
 
 const categoryLabels: Record<ExpenseCategory, string> = {
   RENT: 'Rent', ELECTRICITY: 'Electricity', TRANSPORT: 'Transport',
@@ -85,7 +86,7 @@ export default function ExpensesPage() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-16"><div className="w-1.5 h-1.5 rounded-full bg-primary" /><span className="text-text-muted text-sm ml-3">Loading</span></div>
+        <SkeletonPage label="Loading expenses" />
       ) : filteredExpenses.length === 0 ? (
         <div className="text-center py-16">
           <div className="w-12 h-12 rounded-xl bg-elevated flex items-center justify-center mx-auto mb-3"><Receipt className="h-6 w-6 text-text-muted" /></div>

@@ -10,6 +10,7 @@ import { useToast } from '@/components/ui/toast';
 import { Plus, Users, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { UserRole } from '@/types';
+import { SkeletonPage } from '@/components/ui/skeleton';
 
 export default function StaffPage() {
   const { shop, role } = useAuth();
@@ -57,7 +58,7 @@ export default function StaffPage() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-16"><div className="w-1.5 h-1.5 rounded-full bg-primary" /><span className="text-text-muted text-sm ml-3">Loading</span></div>
+        <SkeletonPage label="Loading staff" />
       ) : members.length === 0 ? (
         <div className="text-center py-16">
           <div className="w-12 h-12 rounded-xl bg-elevated flex items-center justify-center mx-auto mb-3"><Users className="h-6 w-6 text-text-muted" /></div>

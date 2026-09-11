@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/toast';
 import { Clock, Lock, Unlock, CheckCircle, AlertTriangle } from 'lucide-react';
+import { SkeletonPage } from '@/components/ui/skeleton';
 
 export default function ShiftsPage() {
   const { shop, user, role } = useAuth();
@@ -72,7 +73,7 @@ export default function ShiftsPage() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-16"><div className="w-1.5 h-1.5 rounded-full bg-primary" /><span className="text-text-muted text-sm ml-3">Loading</span></div>
+        <SkeletonPage label="Loading shifts" />
       ) : activeShift ? (
         <div className="space-y-4">
           <div className="bg-surface border border-primary/20 rounded-2xl p-5">

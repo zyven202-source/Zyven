@@ -9,6 +9,7 @@ import { useToast } from '@/components/ui/toast';
 import {
   ArrowLeft, Package, AlertTriangle, History, Receipt, TrendingUp, Pencil,
 } from 'lucide-react';
+import { SkeletonPage } from '@/components/ui/skeleton';
 
 type Tab = 'overview' | 'stock' | 'prices' | 'sales';
 
@@ -63,8 +64,11 @@ export default function ProductDetailPage() {
     })();
   }, [shop, productId, navigate, addToast]);
 
-  if (loading || !product) {
-    return <div className="flex items-center justify-center h-64"><div className="w-1.5 h-1.5 rounded-full bg-primary" /><span className="text-text-muted text-sm ml-3">Loading</span></div>;
+  if (loading) {
+    return <SkeletonPage label="Loading product" />;
+  }
+  if (!product) {
+    return <SkeletonPage label="Product not found" />;
   }
 
   const profit = Number(product.selling_price) - Number(product.buying_price);
@@ -87,7 +91,9 @@ export default function ProductDetailPage() {
             {product.barcode && `BC ${product.barcode}`} {product.sku && `· SKU ${product.sku}`} {product.category && `· ${product.category.name}`}
           </p>
         </div>
-        <Button variant="outline" onClick={() => navigate('/inventory')}>
+        <Button variant="outline" onClick={() => {
+          navigate('/inventory', { state: { editProductId: productId } });
+        }}>
           <Pencil className="h-4 w-4" /> Edit
         </Button>
       </div>

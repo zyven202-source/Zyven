@@ -118,6 +118,34 @@ button, a, [role="button"], input, select, textarea {
 
 /* Prevent overscroll on mobile */
 body {
+
+/* ──── Skeleton Shimmer ──── */
+.skeleton {
+  background: linear-gradient(90deg, var(--color-border-subtle) 0%, var(--color-elevated) 50%, var(--color-border-subtle) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
+
+/* ──── Admin page: subtle bottom shadow on first card ──── */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.body {
   overscroll-behavior-y: none;
   -webkit-overflow-scrolling: touch;
 }

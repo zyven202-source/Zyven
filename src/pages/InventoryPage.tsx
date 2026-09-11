@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 import { getProducts, createProduct, updateProduct, getCategories, createCategory } from '@/lib/database';
 import { formatCurrency, cn } from '@/lib/utils';
@@ -16,12 +16,14 @@ import {
   Plus, Search, Package, TrendingUp, AlertTriangle,
   XCircle, Edit, DollarSign,
 } from 'lucide-react';
+import { SkeletonInventory, SkeletonList } from '@/components/ui/skeleton';
 
 type FilterType = 'all' | 'low_stock' | 'out_of_stock' | 'expiring';
 
 export default function InventoryPage() {
   const { shop, role, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { addToast } = useToast();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -45,6 +47,19 @@ export default function InventoryPage() {
   const [formExpiry, setFormExpiry] = useState('');
   const [newCategoryName, setNewCategoryName] = useState('');
   const [showNewCategory, setShowNewCategory] = useState(false);
+
+  // Open edit form when arriving from ProductDetail with editProductId in location state
+  useEffect(() => {
+    const editId = location.state?.editProductId;
+    if (editId) {
+      const product = products.find(p => p.id === editId);
+      if (product && role !== 'OWNER' && role !== 'MANAGER') {
+        navigate('/inventory');
+        return;
+      }
+      if (product) startEdit(product);
+    }
+  }, [location.state?.editProductId, products, role, navigate]);
 
   useEffect(() => {
     if (!shop) return;
@@ -214,12 +229,7 @@ export default function InventoryPage() {
 
       {/* Products List */}
       {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <div className="flex items-center gap-3">
-            <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-            <span className="text-text-muted text-sm">Loading inventory</span>
-          </div>
-        </div>
+        <SkeletonInventory />
       ) : filteredProducts.length === 0 ? (
         <div className="flex flex-col items-center py-16">
           <div className="w-12 h-12 rounded-xl bg-elevated flex items-center justify-center mb-3">

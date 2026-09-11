@@ -4,6 +4,7 @@ import { getAuditLogs } from '@/lib/database';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/toast';
 import { Shield, Plus, Edit, DollarSign, Clock, Package } from 'lucide-react';
+import { SkeletonPage } from '@/components/ui/skeleton';
 
 const actionIcons: Record<string, React.ElementType> = {
   SALE_CREATED: DollarSign, EXPENSE_CREATED: DollarSign, SHIFT_OPENED: Clock, SHIFT_CLOSED: Clock, PRODUCT_CREATED: Plus, PRODUCT_EDITED: Edit, STOCK_RECEIVED: Package,
@@ -37,7 +38,7 @@ export default function AuditLogPage() {
       <h1 className="text-xl font-bold text-text">Audit Log</h1>
 
       {loading ? (
-        <div className="flex items-center justify-center py-16"><div className="w-1.5 h-1.5 rounded-full bg-primary" /><span className="text-text-muted text-sm ml-3">Loading</span></div>
+        <SkeletonPage label="Loading audit log" />
       ) : logs.length === 0 ? (
         <div className="text-center py-16">
           <div className="w-12 h-12 rounded-xl bg-elevated flex items-center justify-center mx-auto mb-3"><Shield className="h-6 w-6 text-text-muted" /></div>

@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 import { ArrowDownToLine, Receipt, Truck, BarChart3, Clock, Users2, ShieldCheck, Settings, LogOut, Sparkles, ReceiptText } from 'lucide-react';
+import { SkeletonPage } from '@/components/ui/skeleton';
 
 export default function MorePage() {
   const navigate = useNavigate();

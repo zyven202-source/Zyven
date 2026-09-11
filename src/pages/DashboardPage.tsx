@@ -8,6 +8,7 @@ import {
   ShoppingCart, TrendingUp, Users, AlertTriangle,
   Plus, ArrowUpRight, Wallet, CreditCard, Package, Clock,
 } from 'lucide-react';
+import { SkeletonDashboard, SkeletonPage } from '@/components/ui/skeleton';
 
 export default function DashboardPage() {
   const { shop, profile } = useAuth();
@@ -38,14 +39,7 @@ export default function DashboardPage() {
   });
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="flex items-center gap-3">
-          <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-          <span className="text-text-muted text-sm">Loading dashboard</span>
-        </div>
-      </div>
-    );
+    return <SkeletonDashboard />;
   }
 
   return (

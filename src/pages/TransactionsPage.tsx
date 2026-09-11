@@ -8,6 +8,7 @@ import { useToast } from '@/components/ui/toast';
 import { Receipt as ReceiptIcon } from 'lucide-react';
 import { ReceiptView, PrintReceipt, type ReceiptData } from '@/components/receipts/Receipt';
 import { Search, Clock } from 'lucide-react';
+import { SkeletonList, SkeletonPage } from '@/components/ui/skeleton';
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -94,7 +95,7 @@ export default function TransactionsPage() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-16"><div className="w-1.5 h-1.5 rounded-full bg-primary" /><span className="text-text-muted text-sm ml-3">Loading</span></div>
+        <SkeletonList rows={7} />
       ) : filtered.length === 0 ? (
         <div className="text-center py-16">
           <div className="w-12 h-12 rounded-xl bg-elevated flex items-center justify-center mx-auto mb-3"><ReceiptIcon className="h-6 w-6 text-text-muted" /></div>
