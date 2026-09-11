@@ -1,5 +1,5 @@
 // Zyven service worker: offline app shell + static asset caching
-const CACHE_NAME = 'zyven-v2';
+const CACHE_NAME = 'zyven-v3';
 // Relative to the SW scope, so the shell works under any base path/domain.
 const APP_SHELL = ['./', './index.html', './manifest.json', './favicon.svg', './icon-192.png', './icon-512.png'];
 

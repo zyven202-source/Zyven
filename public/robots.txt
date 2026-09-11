@@ -17,4 +17,4 @@ Disallow: /settings
 Disallow: /assistant
 Disallow: /more
 
-Sitemap: https://zyven.freebuf.com/sitemap.xml
+Sitemap: https://zyven.freebuff.app/sitemap.xml
