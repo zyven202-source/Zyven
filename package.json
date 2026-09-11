@@ -8,7 +8,8 @@
     "build": "node build.mjs",
     "lint": "oxlint",
     "preview": "vite preview",
-    "icons": "node scripts/generate-icons.mjs"
+    "icons": "node scripts/generate-icons.mjs",
+    "db:deploy": "node scripts/deploy-sql.mjs"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.20",
