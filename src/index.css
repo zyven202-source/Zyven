@@ -117,7 +117,11 @@ button, a, [role="button"], input, select, textarea {
 }
 
 /* Prevent overscroll on mobile */
+/* Prevent overscroll on mobile */
 body {
+  overscroll-behavior-y: none;
+  -webkit-overflow-scrolling: touch;
+}
 
 /* ──── Skeleton Shimmer ──── */
 .skeleton {
@@ -136,18 +140,6 @@ body {
   .skeleton {
     animation: none;
   }
-}
-
-/* ──── Admin page: subtle bottom shadow on first card ──── */
-.page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-.body {
-  overscroll-behavior-y: none;
-  -webkit-overflow-scrolling: touch;
 }
 
 /* ──── Safe Areas ──── */
