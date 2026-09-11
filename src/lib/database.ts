@@ -674,6 +674,34 @@ export async function recordCustomerPayment(
   paymentMethod: PaymentMethod = 'CASH',
   mpesaReference?: string
 ) {
+  if (amount <= 0) throw new Error('Payment amount must be positive');
+
+  // Preferred path: atomic RPC — row-locked balance update + payment +
+  // ledger + audit in one transaction. Race-free under concurrency.
+  try {
+    const { data, error } = await supabase.rpc('record_customer_payment_atomic', {
+      p_shop_id: shopId,
+      p_customer_id: customerId,
+      p_user_id: userId,
+      p_amount: amount,
+      p_payment_method: paymentMethod,
+      p_mpesa_reference: mpesaReference ?? null,
+    });
+    if (error) throw error;
+    const result = data as { payment_id: string; amount: number; balance_after: number };
+    return {
+      payment: { id: result.payment_id, amount: result.amount },
+      newBalance: Number(result.balance_after),
+    };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    // RPC not deployed yet → fall back to the legacy client-side flow.
+    if (!/Could not find the function|schema cache|PGRST202/i.test(message)) {
+      throw err;
+    }
+  }
+
+  // Legacy fallback (non-atomic; kept only for databases without the RPC)
   const { data: customer } = await supabase
     .from('customers')
     .select('current_balance')
@@ -681,19 +709,11 @@ export async function recordCustomerPayment(
     .single();
 
   if (!customer) throw new Error('Customer not found');
-  if (amount <= 0) throw new Error('Payment amount must be positive');
 
   const actualAmount = Math.min(amount, Number(customer.current_balance));
   const newBalance = Math.max(0, Number(customer.current_balance) - actualAmount);
 
-  // Update customer balance
-  await supabase
-    .from('customers')
-    .update({ current_balance: newBalance })
-    .eq('id', customerId);
-
-  // Create payment
-  const { data: payment } = await supabase
+  const { data: payment, error: payErr } = await supabase
     .from('payments')
     .insert({
       shop_id: shopId,
@@ -705,9 +725,9 @@ export async function recordCustomerPayment(
     })
     .select()
     .single();
+  if (payErr) throw payErr;
 
-  // Create ledger entry
-  await supabase.from('customer_ledger_entries').insert({
+  const { error: ledgerErr } = await supabase.from('customer_ledger_entries').insert({
     shop_id: shopId,
     customer_id: customerId,
     payment_id: payment?.id,
@@ -717,6 +737,13 @@ export async function recordCustomerPayment(
     description: `Payment received via ${paymentMethod}`,
     user_id: userId,
   });
+  if (ledgerErr) throw ledgerErr;
+
+  const { error: updErr } = await supabase
+    .from('customers')
+    .update({ current_balance: newBalance })
+    .eq('id', customerId);
+  if (updErr) throw updErr;
 
   return { payment, newBalance };
 }

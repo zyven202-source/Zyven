@@ -47,10 +47,18 @@ BEGIN
   END LOOP;
   v_total := v_subtotal - p_discount;
 
-  -- Insert sale
+  -- Insert sale. ON CONFLICT guards against two devices syncing the same
+  -- queued sale concurrently (backed by sales_client_ref_uniq partial index).
   INSERT INTO sales (shop_id, receipt_number, customer_id, user_id, subtotal, discount, total, payment_method, mpesa_reference, notes)
   VALUES (p_shop_id, v_receipt_number, p_customer_id, p_user_id, v_subtotal, p_discount, v_total, p_payment_method, p_mpesa_reference, 'client_ref:' || p_client_ref::text)
+  ON CONFLICT (shop_id, notes) WHERE notes LIKE 'client_ref:%' DO NOTHING
   RETURNING id INTO v_sale_id;
+
+  IF v_sale_id IS NULL THEN
+    -- Concurrent duplicate: return the sale the other transaction inserted.
+    SELECT * INTO v_existing_sale FROM sales WHERE shop_id = p_shop_id AND notes = 'client_ref:' || p_client_ref::text LIMIT 1;
+    RETURN jsonb_build_object('sale_id', v_existing_sale.id, 'duplicate', true);
+  END IF;
 
   -- Process each item: sale_items + stock decrement + stock movement
   FOR v_item IN SELECT * FROM jsonb_array_elements(p_cart) LOOP

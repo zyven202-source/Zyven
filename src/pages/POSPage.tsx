@@ -32,6 +32,7 @@ export default function POSPage() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CASH');
   const [mpesaRef, setMpesaRef] = useState('');
   const [customerId, setCustomerId] = useState('');
+  const [saleDiscount, setSaleDiscount] = useState('');
   const [processing, setProcessing] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
   const [lastSale, setLastSale] = useState<any>(null);
@@ -168,6 +169,8 @@ export default function POSPage() {
   };
 
   const cartTotal = cart.reduce((sum, item) => sum + (item.unit_price * item.quantity) - item.discount, 0);
+  const discountValue = Math.min(Math.max(Number(saleDiscount) || 0, 0), cartTotal);
+  const payable = cartTotal - discountValue;
 
   const handlePayment = async () => {
     if (cart.length === 0) return;
@@ -204,7 +207,7 @@ export default function POSPage() {
         payment_method: paymentMethod,
         customer_id: customerId || undefined,
         mpesa_reference: mpesaRef || undefined,
-        discount: 0,
+        discount: discountValue,
         shift_id: activeShift?.id,
       });
 
@@ -215,6 +218,7 @@ export default function POSPage() {
         setMpesaRef('');
         setCustomerId('');
         setCustomerSearch('');
+        setSaleDiscount('');
         addToast('warning', 'Offline — sale saved', 'It will sync automatically when you are back online.');
         return;
       }
@@ -227,13 +231,14 @@ export default function POSPage() {
         .eq('notes', `client_ref:${clientRef}`)
         .maybeSingle();
 
-      setLastSale(saleRow ? { ...saleRow, shop } : { receipt_number: '—', total: cartTotal, items: cart.map(i => ({ product_name: i.product_name, quantity: i.quantity, total: i.unit_price * i.quantity })), shop });
+      setLastSale(saleRow ? { ...saleRow, shop } : { receipt_number: '—', total: payable, items: cart.map(i => ({ product_name: i.product_name, quantity: i.quantity, total: i.unit_price * i.quantity })), shop });
       setShowPayment(false);
       setShowReceipt(true);
       setCart([]);
       setMpesaRef('');
       setCustomerId('');
       setCustomerSearch('');
+      setSaleDiscount('');
       addToast('success', 'Sale completed');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Sale failed';
@@ -253,9 +258,18 @@ export default function POSPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted pointer-events-none" />
             <input
               ref={searchRef}
-              placeholder="Search products..."
+              placeholder="Search products or scan…"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
+              onKeyDown={e => {
+                // Keyboard-wedge scanners: they type the barcode then Enter.
+                // ≥6 digits + Enter = barcode lookup, not a text search.
+                if (e.key === 'Enter' && /^\d{6,}$/.test(searchQuery.trim())) {
+                  e.preventDefault();
+                  handleBarcodeDetected(searchQuery.trim());
+                  setSearchQuery('');
+                }
+              }}
               className="w-full h-11 pl-10 pr-24 rounded-xl border border-border-subtle bg-elevated text-sm text-text placeholder:text-text-muted focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/25 transition-colors"
               autoFocus
             />
@@ -432,6 +446,12 @@ export default function POSPage() {
             <span className="text-sm text-text-muted">Total</span>
             <span className="kpi-value-sm text-primary">{formatCurrency(cartTotal)}</span>
           </div>
+          {discountValue > 0 && (
+            <div className="flex items-baseline justify-between">
+              <span className="text-sm text-text-muted">Discount</span>
+              <span className="text-sm font-medium text-warning tabular-nums">−{formatCurrency(discountValue)}</span>
+            </div>
+          )}
           <Button
             className="w-full"
             size="lg"
@@ -439,7 +459,7 @@ export default function POSPage() {
             onClick={() => setShowPayment(true)}
           >
             <CreditCard className="h-4 w-4" />
-            Pay {formatCurrency(cartTotal)}
+            Pay {formatCurrency(payable)}
           </Button>
         </div>
       </div>
@@ -479,7 +499,9 @@ export default function POSPage() {
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Complete Payment</DialogTitle>
-            <DialogDescription>Total: {formatCurrency(cartTotal)}</DialogDescription>
+            <DialogDescription>
+              {discountValue > 0 ? `Total: ${formatCurrency(cartTotal)} − ${formatCurrency(discountValue)} discount` : `Total: ${formatCurrency(cartTotal)}`}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-3 gap-2">
@@ -502,6 +524,18 @@ export default function POSPage() {
                   <span className="text-xs font-medium">{label}</span>
                 </button>
               ))}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-text-secondary">Discount (KSh)</Label>
+              <Input
+                type="number"
+                min="0"
+                inputMode="decimal"
+                placeholder="0"
+                value={saleDiscount}
+                onChange={e => setSaleDiscount(e.target.value)}
+              />
             </div>
 
             {paymentMethod === 'M-PESA' && (

@@ -57,7 +57,9 @@ SUPABASE_URL=your-project-url
 SUPABASE_ANON_KEY=your-anon-key
 ```
 
-3. Apply the database schema to your Supabase project. The full schema is in `supabase/schema.sql`.
+3. Apply the database schema to your Supabase project. The full schema is in `supabase/schema.sql`, followed by the RPC migrations in order:
+   1. `supabase/rpc_process_sale.sql` — atomic sale processing (single transaction: sale + items + stock + payment + ledger + audit)
+   2. `supabase/rpc_record_payment.sql` — atomic customer payments + the `sales_client_ref_uniq` index that makes offline-sale sync idempotent
 
 4. Start the dev server
 
