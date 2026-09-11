@@ -1,6 +1,6 @@
 // Zyven service worker: offline app shell + static asset caching
 const CACHE_NAME = 'zyven-v1';
-const APP_SHELL = ['/', '/index.html', '/manifest.json', '/favicon.svg'];
+const APP_SHELL = ['/', '/index.html', '/manifest.json', '/favicon.svg', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

@@ -17,7 +17,6 @@ export function SkeletonList({ rows = 6, className }: { rows?: number; className
         <div
           key={i}
           className="p-4 rounded-xl bg-surface border border-border-subtle"
-          style={{ animationDelay: `${i * 40}ms` }}
         >
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0 flex-1 space-y-2">
@@ -98,43 +97,42 @@ export function SkeletonPage({ label = 'Loading' }: { label?: string }) {
   );
 }
 
-/** Narrow skeleton for reading-detail screens with a long left column. */
+/** Skeleton shaped like the product detail page. */
 export function SkeletonDetail() {
+  const cards = ['Buying Price', 'Selling Price', 'Profit / Unit', 'Margin'];
+  const rows = ['Current Stock', 'Minimum Stock', 'Stock Value (cost)', 'Potential Revenue', 'Potential Profit'];
+  const stats = ['7-Day Sales', '30-Day Sales', 'Velocity /day'];
   return (
-    <div className="px-4 lg:px-8 py-5 max-w-4xl mx-auto space-y-5 pb-24 lg:pb-6">
+    <div className="px-4 lg:px-8 py-5 max-w-4xl mx-auto space-y-5 pb-24 lg:pb-6" aria-busy="true" aria-label="Loading">
       <div className="flex items-center gap-3">
         <Skeleton className="w-9 h-9 rounded-lg" />
         <div className="min-w-0 flex-1 space-y-2">
           <Skeleton className="h-6 w-48" />
           <Skeleton className="h-4 w-24" />
         </div>
-        <Skeleton className="w-9 h-9 rounded-lg" />
+        <Skeleton className="w-20 h-9 rounded-lg" />
       </div>
-      <div className="grid grid-cols-4 gap-3">
-        {[
-          ['Buying Price'], ['Selling Price'], ['Profit / Unit'], ['Margin'],
-        ].map((cols, i) => (
-          <div key={i} className="bg-surface border border-border-subtle rounded-xl p-4">
-            <Skeleton className="h-3 w-16 mb-1" />
-            <Skeleton className="h-7 w-20" />
+      <div className="grid grid-cols-2 gap-3">
+        {cards.map(label => (
+          <div key={label} className="bg-surface border border-border-subtle rounded-xl p-4">
+            <Skeleton className="h-3 w-16 mb-1.5" />
+            <Skeleton className="h-6 w-20" />
           </div>
         ))}
       </div>
-      <div className="bg-surface border border-border-subtle rounded-xl p-4 space-y-2">
-        {[
-          ['Current Stock'], ['Minimum Stock'], ['Stock Value (cost]'], ['Potential Revenue'], ['Potential Profit'],
-        ].map((cols, i) => (
-          <div key={i} className="flex justify-between text-sm">
+      <div className="bg-surface border border-border-subtle rounded-xl p-4 space-y-2.5">
+        {rows.map(label => (
+          <div key={label} className="flex justify-between">
             <Skeleton className="h-4 w-28" />
             <Skeleton className="h-4 w-20" />
           </div>
         ))}
       </div>
       <div className="grid grid-cols-3 gap-3">
-        {[['7-Day Sales'], ['30-Day Sales'], ['Velocity /day']].map((cols, i) => (
-          <div key={i} className="bg-surface border border-border-subtle rounded-xl p-4 text-center">
-            <Skeleton className="h-3 w-20 mx-auto mb-1" />
-            <Skeleton className="h-7 w-12 mx-auto" />
+        {stats.map(label => (
+          <div key={label} className="bg-surface border border-border-subtle rounded-xl p-4 text-center">
+            <Skeleton className="h-3 w-16 mx-auto mb-1.5" />
+            <Skeleton className="h-6 w-12 mx-auto" />
           </div>
         ))}
       </div>

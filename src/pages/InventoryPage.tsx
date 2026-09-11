@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 import { getProducts, createProduct, updateProduct, getCategories, createCategory } from '@/lib/database';
 import { formatCurrency, cn } from '@/lib/utils';
@@ -48,18 +48,16 @@ export default function InventoryPage() {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [showNewCategory, setShowNewCategory] = useState(false);
 
-  // Open edit form when arriving from ProductDetail with editProductId in location state
+  // Open edit form when arriving from ProductDetail (passes the full product via location state).
+  // Consume once and clear the state so reloads/navigation don't re-open the dialog.
   useEffect(() => {
-    const editId = location.state?.editProductId;
-    if (editId) {
-      const product = products.find(p => p.id === editId);
-      if (product && role !== 'OWNER' && role !== 'MANAGER') {
-        navigate('/inventory');
-        return;
-      }
-      if (product) startEdit(product);
+    const state = location.state as { editProduct?: Product } | null;
+    if (state?.editProduct) {
+      if (role === 'OWNER' || role === 'MANAGER') startEdit(state.editProduct);
+      navigate('/inventory', { replace: true, state: null });
     }
-  }, [location.state?.editProductId, products, role, navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
 
   useEffect(() => {
     if (!shop) return;

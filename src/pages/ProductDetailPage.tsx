@@ -9,7 +9,7 @@ import { useToast } from '@/components/ui/toast';
 import {
   ArrowLeft, Package, AlertTriangle, History, Receipt, TrendingUp, Pencil,
 } from 'lucide-react';
-import { SkeletonPage } from '@/components/ui/skeleton';
+import { SkeletonDetail } from '@/components/ui/skeleton';
 
 type Tab = 'overview' | 'stock' | 'prices' | 'sales';
 
@@ -65,10 +65,18 @@ export default function ProductDetailPage() {
   }, [shop, productId, navigate, addToast]);
 
   if (loading) {
-    return <SkeletonPage label="Loading product" />;
+    return <SkeletonDetail />;
   }
   if (!product) {
-    return <SkeletonPage label="Product not found" />;
+    return (
+      <div className="flex flex-col items-center justify-center py-24 gap-4">
+        <div className="w-12 h-12 rounded-xl bg-elevated flex items-center justify-center">
+          <Package className="h-6 w-6 text-text-muted" />
+        </div>
+        <p className="text-sm font-medium text-text-secondary">Product not found</p>
+        <Button variant="outline" onClick={() => navigate('/inventory')}>Back to Inventory</Button>
+      </div>
+    );
   }
 
   const profit = Number(product.selling_price) - Number(product.buying_price);
@@ -91,9 +99,7 @@ export default function ProductDetailPage() {
             {product.barcode && `BC ${product.barcode}`} {product.sku && `· SKU ${product.sku}`} {product.category && `· ${product.category.name}`}
           </p>
         </div>
-        <Button variant="outline" onClick={() => {
-          navigate('/inventory', { state: { editProductId: productId } });
-        }}>
+        <Button variant="outline" onClick={() => navigate('/inventory', { state: { editProduct: product } })}>
           <Pencil className="h-4 w-4" /> Edit
         </Button>
       </div>
