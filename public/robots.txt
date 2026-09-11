@@ -1,0 +1,20 @@
+User-agent: *
+Allow: /
+
+# Public app shell only — authenticated POS pages are not for crawlers
+Disallow: /pos
+Disallow: /inventory
+Disallow: /stock
+Disallow: /daftari
+Disallow: /transactions
+Disallow: /reports
+Disallow: /shifts
+Disallow: /expenses
+Disallow: /suppliers
+Disallow: /staff
+Disallow: /audit
+Disallow: /settings
+Disallow: /assistant
+Disallow: /more
+
+Sitemap: https://zyven.freebuf.com/sitemap.xml

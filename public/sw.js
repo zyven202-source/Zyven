@@ -1,6 +1,7 @@
 // Zyven service worker: offline app shell + static asset caching
-const CACHE_NAME = 'zyven-v1';
-const APP_SHELL = ['/', '/index.html', '/manifest.json', '/favicon.svg', '/icon-192.png', '/icon-512.png'];
+const CACHE_NAME = 'zyven-v2';
+// Relative to the SW scope, so the shell works under any base path/domain.
+const APP_SHELL = ['./', './index.html', './manifest.json', './favicon.svg', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -30,10 +31,10 @@ self.addEventListener('fetch', (event) => {
       fetch(request)
         .then((res) => {
           const copy = res.clone();
-          caches.open(CACHE_NAME).then((c) => c.put('/index.html', copy));
+          caches.open(CACHE_NAME).then((c) => c.put('./index.html', copy));
           return res;
         })
-        .catch(() => caches.match('/index.html'))
+        .catch(() => caches.match('./index.html'))
     );
     return;
   }
