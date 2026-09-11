@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
-import { ArrowDownToLine, Receipt, Truck, BarChart3, Clock, Users2, TrendingUp, Settings, LogOut, Sparkles, ReceiptText } from 'lucide-react';
+import { ArrowDownToLine, Receipt, Truck, BarChart3, Clock, Users2, ShieldCheck, Settings, LogOut, Sparkles, ReceiptText } from 'lucide-react';
 
 export default function MorePage() {
   const navigate = useNavigate();
@@ -16,7 +16,7 @@ export default function MorePage() {
     { label: 'Reports', icon: BarChart3, path: '/reports', desc: 'Analytics and insights', roles: ['OWNER', 'MANAGER'] },
     { label: 'Shifts', icon: Clock, path: '/shifts', desc: 'Cash shift management' },
     { label: 'Staff', icon: Users2, path: '/staff', desc: 'Manage your team', roles: ['OWNER'] },
-    { label: 'Audit Log', icon: TrendingUp, path: '/audit', desc: 'View all actions', roles: ['OWNER'] },
+    { label: 'Audit Log', icon: ShieldCheck, path: '/audit', desc: 'View all actions', roles: ['OWNER'] },
     { label: 'Settings', icon: Settings, path: '/settings', desc: 'App and shop settings' },
   ];
 

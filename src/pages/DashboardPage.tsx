@@ -98,6 +98,43 @@ export default function DashboardPage() {
         />
       </div>
 
+      {/* ──── Recent Transactions ──── */}
+      {data?.recentSales?.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-text-muted uppercase tracking-wider">Recent Transactions</h2>
+            <button
+              onClick={() => navigate('/transactions')}
+              className="text-xs font-medium text-primary hover:underline"
+            >
+              View all
+            </button>
+          </div>
+          <div className="space-y-1.5">
+            {data.recentSales.slice(0, 5).map((sale: any) => (
+              <button
+                key={sale.id}
+                onClick={() => navigate('/transactions')}
+                className="w-full text-left p-3.5 rounded-xl bg-surface border border-border-subtle hover:border-border transition-colors active:scale-[0.99]"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-text">#{sale.receipt_number}</p>
+                    <p className="text-[11px] text-text-muted mt-0.5">
+                      {new Date(sale.created_at).toLocaleTimeString('en-KE', { hour: '2-digit', minute: '2-digit' })} · {sale.payment_method}
+                      {sale.customer?.full_name ? ` · ${sale.customer.full_name}` : ''}
+                    </p>
+                  </div>
+                  <p className="text-sm font-bold text-primary tabular-nums flex-shrink-0">
+                    {formatCurrency(Number(sale.total))}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ──── Quick Actions ──── */}
       <div className="grid grid-cols-4 gap-2.5">
         {[

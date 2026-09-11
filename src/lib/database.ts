@@ -74,7 +74,7 @@ export async function searchProducts(shopId: string, query: string) {
   return data as Product[];
 }
 
-export async function createProduct(product: Omit<Product, 'id' | 'created_at' | 'updated_at' | 'current_stock'> & { current_stock?: number }) {
+export async function createProduct(product: Omit<Product, 'id' | 'created_at' | 'updated_at' | 'current_stock'> & { current_stock?: number }, userId?: string) {
   const { data, error } = await supabase
     .from('products')
     .insert({
@@ -91,6 +91,18 @@ export async function createProduct(product: Omit<Product, 'id' | 'created_at' |
     buying_price: product.buying_price,
     selling_price: product.selling_price,
   });
+
+  // Audit log
+  if (product.shop_id) {
+    await supabase.from('audit_logs').insert({
+      shop_id: product.shop_id,
+      user_id: userId || data.shop_id,
+      action: 'PRODUCT_CREATED',
+      entity_type: 'product',
+      entity_id: data.id,
+      metadata: { name: product.name, buying_price: product.buying_price, selling_price: product.selling_price, initial_stock: product.current_stock || 0 },
+    });
+  }
 
   return data;
 }
@@ -123,6 +135,19 @@ export async function updateProduct(productId: string, updates: Partial<Product>
     .select()
     .single();
   if (error) throw error;
+
+  // Audit log
+  if (data?.shop_id) {
+    await supabase.from('audit_logs').insert({
+      shop_id: data.shop_id,
+      user_id: data.shop_id,
+      action: 'PRODUCT_EDITED',
+      entity_type: 'product',
+      entity_id: productId,
+      metadata: { name: data.name, buying_price: data.buying_price, selling_price: data.selling_price },
+    });
+  }
+
   return data;
 }
 
@@ -186,6 +211,16 @@ export async function addStock(
     .select()
     .single();
   if (error) throw error;
+
+  // Audit log
+  await supabase.from('audit_logs').insert({
+    shop_id: shopId,
+    user_id: userId,
+    action: 'STOCK_RECEIVED',
+    entity_type: 'product',
+    entity_id: productId,
+    metadata: { quantity, buying_price: buyingPrice, selling_price: sellingPrice, reason: reason || 'Stock received' },
+  });
 
   return movement;
 }
@@ -588,13 +623,24 @@ export async function getCustomers(shopId: string, search?: string) {
   return data as Customer[];
 }
 
-export async function createCustomer(shopId: string, customer: { full_name: string; phone?: string; notes?: string }) {
+export async function createCustomer(shopId: string, customer: { full_name: string; phone?: string; notes?: string }, userId?: string) {
   const { data, error } = await supabase
     .from('customers')
-    .insert({ shop_id: shopId, ...customer })
+    .insert({ shop_id: shopId, ...customer, current_balance: 0 })
     .select()
     .single();
   if (error) throw error;
+
+  // Audit log
+  await supabase.from('audit_logs').insert({
+    shop_id: shopId,
+    user_id: userId || shopId,
+    action: 'CUSTOMER_CREATED',
+    entity_type: 'customer',
+    entity_id: data.id,
+    metadata: { name: customer.full_name, phone: customer.phone || null },
+  });
+
   return data;
 }
 
@@ -870,13 +916,24 @@ export async function getSuppliers(shopId: string) {
   return data as Supplier[];
 }
 
-export async function createSupplier(shopId: string, supplier: { name: string; phone?: string; email?: string; address?: string; notes?: string }) {
+export async function createSupplier(shopId: string, supplier: { name: string; phone?: string; email?: string; address?: string; notes?: string }, userId?: string) {
   const { data, error } = await supabase
     .from('suppliers')
     .insert({ shop_id: shopId, ...supplier })
     .select()
     .single();
   if (error) throw error;
+
+  // Audit log
+  await supabase.from('audit_logs').insert({
+    shop_id: shopId,
+    user_id: userId || shopId,
+    action: 'SUPPLIER_CREATED',
+    entity_type: 'supplier',
+    entity_id: data.id,
+    metadata: { name: supplier.name },
+  });
+
   return data;
 }
 
@@ -952,6 +1009,9 @@ export async function getDashboardData(shopId: string) {
   // Today's expenses
   const todayExpenses = await getTotalExpenses(shopId, today.toISOString().split('T')[0]);
 
+  // Recent transactions (5 latest)
+  const recentSales = await getSales(shopId, 5);
+
   return {
     todaySales: todaySales.totalSales,
     cashSales: todaySales.cashSales,
@@ -966,5 +1026,6 @@ export async function getDashboardData(shopId: string) {
     overdueCustomers,
     activeShift,
     todayExpenses,
+    recentSales,
   };
 }

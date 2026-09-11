@@ -9,7 +9,7 @@ import { useToast } from '@/components/ui/toast';
 import { Plus, Truck, Phone, Mail } from 'lucide-react';
 
 export default function SuppliersPage() {
-  const { shop, role } = useAuth();
+  const { shop, role, user } = useAuth();
   const { addToast } = useToast();
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,7 +24,7 @@ export default function SuppliersPage() {
   const handleAdd = async () => {
     if (!shop || !formName.trim()) { addToast('error', 'Name is required'); return; }
     try {
-      await createSupplier(shop.id, { name: formName.trim(), phone: formPhone || undefined, email: formEmail || undefined, notes: formNotes || undefined });
+      await createSupplier(shop.id, { name: formName.trim(), phone: formPhone || undefined, email: formEmail || undefined, notes: formNotes || undefined }, user?.id);
       addToast('success', 'Supplier added');
       setShowAdd(false); setFormName(''); setFormPhone(''); setFormEmail(''); setFormNotes('');
       if (shop) getSuppliers(shop.id).then(setSuppliers);

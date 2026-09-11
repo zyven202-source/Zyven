@@ -20,7 +20,7 @@ import {
 type FilterType = 'all' | 'low_stock' | 'out_of_stock' | 'expiring';
 
 export default function InventoryPage() {
-  const { shop, role } = useAuth();
+  const { shop, role, user } = useAuth();
   const navigate = useNavigate();
   const { addToast } = useToast();
   const [products, setProducts] = useState<Product[]>([]);
@@ -116,7 +116,7 @@ export default function InventoryPage() {
           category_id: formCategory || undefined, unit: formUnit,
           notes: formNotes || undefined, is_active: true,
           expiry_date: formExpiry || undefined,
-        });
+        }, user?.id);
         addToast('success', 'Product created');
       }
       setShowAddProduct(false);

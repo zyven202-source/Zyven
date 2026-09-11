@@ -6,7 +6,7 @@ import {
   Home, ShoppingCart, Package, Users,
   TrendingUp, ArrowDownToLine, Receipt, BarChart3,
   Settings, Users2, Truck, LogOut, X, Menu, Clock,
-  ReceiptText, Sparkles,
+  ReceiptText, Sparkles, ShieldCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { UserRole } from '@/types';
@@ -34,7 +34,7 @@ const secondaryNav: NavItem[] = [
   { path: '/reports', label: 'Reports', icon: BarChart3, roles: ['OWNER', 'MANAGER'] },
   { path: '/suppliers', label: 'Suppliers', icon: Truck, roles: ['OWNER', 'MANAGER'] },
   { path: '/staff', label: 'Staff', icon: Users2, roles: ['OWNER'] },
-  { path: '/audit', label: 'Audit Log', icon: TrendingUp, roles: ['OWNER'] },
+  { path: '/audit', label: 'Audit Log', icon: ShieldCheck, roles: ['OWNER'] },
   { path: '/settings', label: 'Settings', icon: Settings, roles: ['OWNER'] },
 ];
 

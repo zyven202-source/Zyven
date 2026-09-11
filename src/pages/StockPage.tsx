@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { searchProducts, addStock, adjustStock, getStockMovements, createProduct, getSuppliers } from '@/lib/database';
@@ -17,6 +18,7 @@ import type { StockMovementType } from '@/types';
 export default function StockPage() {
   const { shop, user } = useAuth();
   const { addToast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showAddStock, setShowAddStock] = useState(false);
@@ -48,6 +50,18 @@ export default function StockPage() {
     if (!shop) return;
     getSuppliers(shop.id).then(setSuppliers);
   }, [shop]);
+
+  // Deep link from POS: /stock?new=BARCODE opens the create form pre-filled
+  useEffect(() => {
+    const prefill = searchParams.get('new');
+    if (prefill) {
+      setNewBarcode(prefill);
+      setSupplierId('');
+      setShowNewProduct(true);
+      setSearchParams({}, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const handleSearch = async () => {
     if (!shop || !searchQuery.trim()) return;
@@ -92,7 +106,8 @@ export default function StockPage() {
         setSearchResults([]);
         selectProduct(data[0]);
       } else {
-        addToast('warning', `No product with barcode ${barcode}`);
+        addToast('warning', `No product with barcode ${barcode}`, 'Fill in the details to create it');
+        setSupplierId('');
         setNewBarcode(barcode);
         setShowNewProduct(true);
       }
@@ -151,11 +166,13 @@ export default function StockPage() {
         buying_price: Number(newBuyingPrice), selling_price: Number(newSellingPrice),
         current_stock: Number(newQuantity), minimum_stock: Number(newMinStock),
         unit: 'pcs', is_active: true,
-      });
+      }, user.id);
       await addStock(shop.id, product.id, Number(newQuantity), Number(newBuyingPrice), Number(newSellingPrice), user.id, supplierId || undefined, 'Initial stock');
       addToast('success', 'Product created with stock');
       setShowNewProduct(false);
       setNewName(''); setNewBarcode(''); setNewBuyingPrice(''); setNewSellingPrice(''); setNewQuantity(''); setNewMinStock('5');
+      setSupplierId('');
+      handleSearch();
     } catch (err: any) {
       addToast('error', 'Failed to create product', err.message);
     }

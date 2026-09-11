@@ -18,6 +18,12 @@ export function BarcodeScanner({ open, onClose, onDetected }: BarcodeScannerProp
   const [manualMode, setManualMode] = useState(false);
   const [manualValue, setManualValue] = useState('');
 
+  // Keep callbacks in refs so the camera effect does not restart on every parent render
+  const onDetectedRef = useRef(onDetected);
+  const onCloseRef = useRef(onClose);
+  onDetectedRef.current = onDetected;
+  onCloseRef.current = onClose;
+
   useEffect(() => {
     if (!open || manualMode) return;
 
@@ -31,8 +37,8 @@ export function BarcodeScanner({ open, onClose, onDetected }: BarcodeScannerProp
         { fps: 10, qrbox: { width: 250, height: 150 } },
         (decodedText) => {
           stopScanner();
-          onDetected(decodedText);
-          onClose();
+          onDetectedRef.current(decodedText);
+          onCloseRef.current();
         },
         () => { /* per-frame decode errors: ignore */ }
       )
@@ -56,7 +62,7 @@ export function BarcodeScanner({ open, onClose, onDetected }: BarcodeScannerProp
       scannerRef.current?.clear();
       scannerRef.current = null;
     };
-  }, [open, manualMode, onDetected, onClose]);
+  }, [open, manualMode]);
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) { onClose(); } }}>

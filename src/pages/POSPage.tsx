@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { searchProducts, getActiveShift } from '@/lib/database';
@@ -21,6 +22,7 @@ import {
 
 export default function POSPage() {
   const { shop, user } = useAuth();
+  const navigate = useNavigate();
   const { addToast } = useToast();
   const [products, setProducts] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -39,6 +41,7 @@ export default function POSPage() {
   const [customers, setCustomers] = useState<any[]>([]);
   const [showScanner, setShowScanner] = useState(false);
   const [offlineQueued, setOfflineQueued] = useState(0);
+  const [unknownBarcode, setUnknownBarcode] = useState<string | null>(null);
 
   useEffect(() => {
     if (!shop) return;
@@ -81,12 +84,22 @@ export default function POSPage() {
         .or(`barcode.eq.${barcode},sku.eq.${barcode}`)
         .limit(1);
       if (data && data.length > 0) {
-        addToCart(data[0]);
+        const product = data[0];
+        if (product.current_stock <= 0) {
+          addToast('warning', `${product.name} is out of stock`, 'Cannot sell — restock first');
+          return;
+        }
+        if (!product.buying_price || Number(product.buying_price) <= 0) {
+          setUnknownBarcode(null);
+          addToast('error', `${product.name} needs a buying price first`, 'Update it from Inventory before selling');
+          return;
+        }
+        addToCart(product);
       } else {
-        addToast('warning', `No product with barcode ${barcode}`);
+        setUnknownBarcode(barcode);
       }
     } catch {
-      addToast('error', 'Lookup failed');
+      addToast('error', 'Lookup failed', 'Check your connection and try again');
     }
   };
 
@@ -437,6 +450,29 @@ export default function POSPage() {
         onClose={() => setShowScanner(false)}
         onDetected={handleBarcodeDetected}
       />
+
+      {/* ──── Unknown Barcode Dialog ──── */}
+      <Dialog open={!!unknownBarcode} onOpenChange={(o) => { if (!o) setUnknownBarcode(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-warning" /> Product not found
+            </DialogTitle>
+            <DialogDescription>No product with barcode "{unknownBarcode}" in your shop.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Button className="w-full" onClick={() => { const bc = unknownBarcode; setUnknownBarcode(null); navigate(`/stock?new=${encodeURIComponent(bc ?? '')}`); }}>
+              <Plus className="h-4 w-4" /> Create product with this barcode
+            </Button>
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="outline" onClick={() => { setUnknownBarcode(null); setShowScanner(true); }}>
+                <ScanBarcode className="h-4 w-4" /> Scan again
+              </Button>
+              <Button variant="outline" onClick={() => setUnknownBarcode(null)}>Cancel</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* ──── Payment Dialog ──── */}
       <Dialog open={showPayment} onOpenChange={setShowPayment}>

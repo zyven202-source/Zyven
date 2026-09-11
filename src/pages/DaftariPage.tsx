@@ -52,7 +52,7 @@ export default function DaftariPage() {
   const handleAddCustomer = async () => {
     if (!shop || !newName.trim()) { addToast('error', 'Name is required'); return; }
     try {
-      await createCustomer(shop.id, { full_name: newName.trim(), phone: newPhone || undefined, notes: newNotes || undefined });
+      await createCustomer(shop.id, { full_name: newName.trim(), phone: newPhone || undefined, notes: newNotes || undefined }, user?.id);
       addToast('success', 'Customer added');
       setShowAddCustomer(false);
       setNewName(''); setNewPhone(''); setNewNotes('');
